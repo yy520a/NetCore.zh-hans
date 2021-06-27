@@ -28,8 +28,8 @@ namespace NetCore.zh_hans
             var openXml = new OpenFileDialog
             {
                 Multiselect = true,
-                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "packs", "Microsoft.AspNetCore.App.Ref", "3.1.10", "ref", "netcoreapp3.1"),
-                // InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "packs"),
+                //InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "packs", "Microsoft.AspNetCore.App.Ref", "3.1.10", "ref", "netcoreapp3.1"),
+                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "packs"),
                 Filter = "要翻译的文件,可多选|*.xml"
             };
             if (openXml.ShowDialog() == DialogResult.OK)
@@ -106,12 +106,12 @@ namespace NetCore.zh_hans
 
             }));
 
-            const int bathCount = 200;
-
+            //百度翻译高级版（QPS=10） 
+            const int qps = 5;
+            var bathCount = allText.Count / qps;
             var list = new List<Task>();
 
-            var size = (allText.Count / bathCount) + 1;
-            for (var i = 0; i < size; i++)
+            for (var i = 0; i < qps + 1; i++)
             {
                 var data = allText.Skip(i * bathCount).Take(bathCount).ToList();
                 if (!data.Any())
@@ -131,11 +131,24 @@ namespace NetCore.zh_hans
 
                         var translationText = await TranslateText(text, appid, secret);
                         dict[text] = translationText;
+                        await Task.Delay(TimeSpan.FromMilliseconds(200));
                     }
                 }));
             }
 
             await Task.WhenAll(list.ToArray());
+
+            //对于请求失败的词语 再重试一次
+            var failKeys = dict
+                .Where(v => string.IsNullOrWhiteSpace(v.Value))
+                .Select(k => k.Key).ToList();
+
+            foreach (var key in failKeys)
+            {
+                var translationText = await TranslateText(key, appid, secret);
+                dict[key] = translationText;
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
+            }
 
             return dict;
         }
@@ -167,7 +180,6 @@ namespace NetCore.zh_hans
                     //匹配<returns></returns>
                     "(?<=(<returns>))[.\\s\\S]*?(?=(</returns>))",
                 };
-
 
                 var matches = new List<Match>();
                 foreach (var pattern in regexPatterns)

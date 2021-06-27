@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -67,11 +68,12 @@ namespace NetCore.zh_hans
             }
             catch (Exception e)
             {
-                System.Diagnostics.Debug.WriteLine($"translate [{str}] error,{e.Message}");
+                Debug.WriteLine($"translate [{str}] error,{e.Message}");
             }
 
             if (string.IsNullOrWhiteSpace(retString))
             {
+                Debug.WriteLine($"translate [{str}] error, content is null");
                 return null;
             }
 
@@ -79,6 +81,7 @@ namespace NetCore.zh_hans
 
             if (result.error_code != 0)
             {
+                Debug.WriteLine($"translate [{str}] error, {retString}");
                 return null;
             }
 
