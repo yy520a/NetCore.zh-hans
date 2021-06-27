@@ -63,7 +63,7 @@ namespace NetCore.zh_hans
                     list.Add(task);
                 }
 
-                await Task.WhenAll(list.ToArray());
+                await Task.WhenAll(list.ToArray()).ConfigureAwait(false);
 
                 button_Import.Invoke((MethodInvoker)(() =>
                 {
@@ -192,11 +192,14 @@ namespace NetCore.zh_hans
                         ;
                     if (!string.IsNullOrWhiteSpace(text))
                     {
-                        englishTextSet.Add(text);
+                        //如果不包含空格，说明是一个单词，不进行替换
+                        if (text.Contains(" "))
+                        {
+                            englishTextSet.Add(text);
+                        }
                     }
                 }
             }
-
             return englishTextSet;
         }
         private static async Task<string> TranslateText(string text, string appid, string secret)
