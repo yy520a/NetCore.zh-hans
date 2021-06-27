@@ -58,7 +58,6 @@
             // 
             this.textBox_appId.Location = new System.Drawing.Point(117, 22);
             this.textBox_appId.Name = "textBox_appId";
-            this.textBox_appId.PasswordChar = '*';
             this.textBox_appId.Size = new System.Drawing.Size(234, 23);
             this.textBox_appId.TabIndex = 1;
             this.textBox_appId.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
@@ -67,7 +66,6 @@
             // 
             this.textBox_secretKey.Location = new System.Drawing.Point(117, 65);
             this.textBox_secretKey.Name = "textBox_secretKey";
-            this.textBox_secretKey.PasswordChar = '*';
             this.textBox_secretKey.Size = new System.Drawing.Size(234, 23);
             this.textBox_secretKey.TabIndex = 1;
             this.textBox_secretKey.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
