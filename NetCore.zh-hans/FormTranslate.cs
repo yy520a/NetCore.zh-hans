@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace NetCore.zh_hans
@@ -51,18 +46,24 @@ namespace NetCore.zh_hans
 
                 Thread thread_Translate = new Thread(delegate ()
                 {
-                    for (int i = 0; i < fileNames.Length; i++)
+                    foreach (string fileName in fileNames)
                     {
                         progressBar_Translate.Invoke((MethodInvoker)(() =>
                         {
                             progressBar_Translate.Value += progressBar_Translate.Step;//更新进度条
                         }));
 
-                        string ReadXmlList = File.ReadAllText(fileNames[i], Encoding.UTF8).Trim(); //读取选定的Xml之一
+                        string readXmlList = File.ReadAllText(fileName, Encoding.UTF8).Trim(); //读取选定的Xml之一
+
+                        button_Import.Invoke((MethodInvoker)(() =>
+                        {
+                            button_Import.Text = $"正在翻译{fileName}";
+                            button_Import.Enabled = false;
+                        }));
 
                         MatchCollection MatchVar;
                         Regex MatchPic = new Regex("(?<=(" + "<summary>" + "))[.\\s\\S]*?(?=(" + "</summary>" + "))");//筛选标准
-                        MatchVar = MatchPic.Matches(ReadXmlList);//匹配<summary>中间的英文说明</summary>
+                        MatchVar = MatchPic.Matches(readXmlList);//匹配<summary>中间的英文说明</summary>
                         if (MatchVar.Count >= 1)
                         {
                             List<string> repeatList = new List<string>();//防重复翻译列表
@@ -86,12 +87,12 @@ namespace NetCore.zh_hans
                                         //至此接近完美了，硬伤是百度翻译词义的准确性，GoogleTranslate很不错，可惜我申请不了接口，要绑定支付方式，尝试过用协议调用https://translate.google.cn/，单位时间内对IP有翻译次数限制，挂代理速度及稳定性又很无奈，先将就下吧。。。
 
                                         //原文+译文替换原文,后面换行加些空白字符保持格式一致性 
-                                        ReadXmlList = ReadXmlList.Replace(MatchVar[k].Value, $"{MatchVar[k].Value}<para>{okStr}</para>{Environment.NewLine}");
+                                        readXmlList = readXmlList.Replace(MatchVar[k].Value, $"{MatchVar[k].Value}<para>{okStr}</para>{Environment.NewLine}");
                                     }
                                 }
                             }
 
-                            string saveFilePath = path + "\\" + Path.GetFileName(fileNames[i]);//保存翻译后的文档
+                            string saveFilePath = path + "\\" + Path.GetFileName(fileName);//保存翻译后的文档
                             StreamWriter swStream;
                             if (File.Exists(saveFilePath))
                             {
@@ -102,7 +103,7 @@ namespace NetCore.zh_hans
                                 swStream = File.CreateText(saveFilePath);
                             }
 
-                            swStream.Write(ReadXmlList);
+                            swStream.Write(readXmlList);
                             swStream.Flush();
                             swStream.Close();
                         }
@@ -110,12 +111,15 @@ namespace NetCore.zh_hans
                     button_Import.Invoke((MethodInvoker)(() =>
                     {
                         button_Import.Text = "翻译完成。";
+                        button_Import.Enabled = true;
                     }));
 
                     System.Diagnostics.Process.Start("explorer.exe", path);   //翻译全部完成后，自动打开zh_hans文件夹，然后把zh_hans复制到对应的资源文件夹下面即可
-                });
-                thread_Translate.IsBackground = true;
-                thread_Translate.Name = "Translate";
+                })
+                {
+                    IsBackground = true,
+                    Name = "Translate"
+                };
                 thread_Translate.Start();
             }
         }
