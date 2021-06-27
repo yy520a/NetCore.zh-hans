@@ -1,29 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Net;
+﻿using Newtonsoft.Json;
+using System;
+using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Web;
-using Newtonsoft.Json.Linq;
 
 namespace NetCore.zh_hans
 {
-    class Translate
+    internal class Translate
     {
         // 计算MD5值
         public static string EncryptString(string str)
         {
-            MD5 md5 = MD5.Create();
+            var md5 = MD5.Create();
             // 将字符串转换成字节数组
-            byte[] byteOld = Encoding.UTF8.GetBytes(str);
+            var byteOld = Encoding.UTF8.GetBytes(str);
             // 调用加密方法
-            byte[] byteNew = md5.ComputeHash(byteOld);
+            var byteNew = md5.ComputeHash(byteOld);
             // 将加密结果转换为字符串
-            StringBuilder sb = new StringBuilder();
-            foreach (byte b in byteNew)
+            var sb = new StringBuilder();
+            foreach (var b in byteNew)
             {
                 // 将字节转换成16进制表示的字符串，
                 sb.Append(b.ToString("x2"));
@@ -32,6 +31,7 @@ namespace NetCore.zh_hans
             return sb.ToString();
         }
 
+        private static readonly HttpClient _httpClient = new HttpClient(new SocketsHttpHandler());
         /// <summary>
         /// 调用百度翻译API并返回结果
         /// </summary>
@@ -39,54 +39,84 @@ namespace NetCore.zh_hans
         /// <param name="inputAppId">百度翻译接口|AppId </param>
         /// <param name="inputSecretKey">百度翻译接口|SecretKey </param>
         /// <returns>返回的翻译结果</returns>
-        public static string TranslateText(string str, string inputAppId, string inputSecretKey)
+        public static async Task<string> TranslateText(string str, string inputAppId, string inputSecretKey)
         {
-            // 原文
-            string q = str;
             // 源语言
-            string from = "en";
+            var from = "en";
             // 目标语言
-            string to = "zh";
+            var to = "zh";
             // 改成您的APP ID
-            string appId = inputAppId;
-            Random rd = new Random();
-            string salt = rd.Next(100000).ToString();
+            var appId = inputAppId;
+            var rd = new Random();
+            var salt = rd.Next(100000).ToString();
             // 改成您的密钥
-            string secretKey = inputSecretKey;
-            string sign = EncryptString(appId + q + salt + secretKey);
-            string url = "http://api.fanyi.baidu.com/api/trans/vip/translate?";
-            url += "q=" + HttpUtility.UrlEncode(q);
+            var secretKey = inputSecretKey;
+            var sign = EncryptString(appId + str + salt + secretKey);
+            var url = "http://api.fanyi.baidu.com/api/trans/vip/translate?";
+            url += "q=" + HttpUtility.UrlEncode(str);
             url += "&from=" + from;
             url += "&to=" + to;
             url += "&appid=" + appId;
             url += "&salt=" + salt;
             url += "&sign=" + sign;
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            request.Method = "GET";
-            request.ContentType = "text/html;charset=UTF-8";
-            request.UserAgent = null;
-            request.Timeout = 6000;
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            Stream myResponseStream = response.GetResponseStream();
-            StreamReader myStreamReader = new StreamReader(myResponseStream, Encoding.GetEncoding("utf-8"));
-            string retString = myStreamReader.ReadToEnd();
-            myStreamReader.Close();
-            myResponseStream.Close();
 
-            //以上是百度提供的Demo，大家懂的，我也懒得改了
-
-            //返回值做一下处理
-            MatchCollection MatchVar;
-            Regex MatchPic = new Regex("(?<=(" + "dst\":\"" + "))[.\\s\\S]*?(?=(" + "\"}]" + "))");//筛选标准
-            MatchVar = MatchPic.Matches(retString);//匹配返回的Unicode结果
-            if (MatchVar.Count >= 1)
+            var retString = "";
+            try
             {
-                string UnicodeStr = MatchVar[0].Value;
-                string resultsOKStr = UnicodeToString(UnicodeStr);
-                return resultsOKStr;
+                retString = await _httpClient.GetStringAsync(url);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine($"translate [{str}] error,{e.Message}");
             }
 
-            return null;
+            if (string.IsNullOrWhiteSpace(retString))
+            {
+                return null;
+            }
+
+            var result = JsonConvert.DeserializeObject<TranslateResult>(retString);
+
+            if (result.error_code != 0)
+            {
+                return null;
+            }
+
+            return result.trans_result.FirstOrDefault()?.dst;
+
+            //返回值做一下处理 
+            //var regex = new Regex("(?<=(" + "dst\":\"" + "))[.\\s\\S]*?(?=(" + "\"}]" + "))");//筛选标准
+            //var matchVar = regex.Matches(retString);//匹配返回的Unicode结果
+            //if (matchVar.Count <= 0)
+            //{
+            //    return null;
+            //}
+
+            //var unicodeStr = matchVar[0].Value;
+            //var resultsOkStr = UnicodeToString(unicodeStr);
+            //return resultsOkStr;
+
+        }
+
+        //https://api.fanyi.baidu.com/api/trans/product/apidoc
+        public class TranslateResult
+        {
+            public int error_code { get; set; }
+            public string from { get; set; }
+            public string to { get; set; }
+            public Trans_Result[] trans_result { get; set; }
+        }
+
+        public class Trans_Result
+        {
+            /// <summary>
+            /// 原文
+            /// </summary>
+            public string src { get; set; }
+            /// <summary>
+            /// 译文
+            /// </summary>
+            public string dst { get; set; }
         }
 
 
@@ -102,16 +132,15 @@ namespace NetCore.zh_hans
         }
 
         /// <summary>
-        /// <summary>
         /// 字符串转Unicode
         /// </summary>
         /// <param name="source">源字符串</param>
         /// <returns>Unicode编码后的字符串</returns>
         public static string String2Unicode(string source)
         {
-            byte[] bytes = Encoding.Unicode.GetBytes(source);
-            StringBuilder stringBuilder = new StringBuilder();
-            for (int i = 0; i < bytes.Length; i += 2)
+            var bytes = Encoding.Unicode.GetBytes(source);
+            var stringBuilder = new StringBuilder();
+            for (var i = 0; i < bytes.Length; i += 2)
             {
                 stringBuilder.AppendFormat("\\u{0}{1}", bytes[i + 1].ToString("x").PadLeft(2, '0'), bytes[i].ToString("x").PadLeft(2, '0'));
             }
