@@ -120,14 +120,20 @@ namespace NetCore.zh_hans
 
         private void FormTranslate_Load(object sender, EventArgs e)
         {
-            textBox_appId.Text = AppXml.XmlRead("百度APPID");
-            textBox_secretKey.Text = AppXml.XmlRead("百度SecretKey");
+            BaiduAccount baidu = AppConfig.GetBaiduAccount();
+            textBox_appId.Text = baidu.Appid;
+            textBox_secretKey.Text = baidu.Secret;
         }
 
         private void FormTranslate_FormClosing(object sender, FormClosingEventArgs e)
         {
-            AppXml.XmlWrite("百度APPID", textBox_appId.Text.Trim());
-            AppXml.XmlWrite("百度SecretKey", textBox_secretKey.Text.Trim());
+            if (string.IsNullOrWhiteSpace(textBox_appId.Text.Trim())
+                || string.IsNullOrWhiteSpace(textBox_secretKey.Text.Trim()))
+            {
+                return;
+            }
+
+            AppConfig.SetBaiduAccount(textBox_appId.Text.Trim(), textBox_secretKey.Text.Trim());
         }
 
     }
