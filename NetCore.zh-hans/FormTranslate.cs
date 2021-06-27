@@ -72,15 +72,18 @@ namespace NetCore.zh_hans
                                     string okStr = Translate.TranslateText(HWC, textBox_appId.Text.Trim(), textBox_secretKey.Text.Trim()); //执行翻译
                                     if (okStr != null)
                                     {
-                                        okStr = okStr.Replace("\\", "");//移除多余的转义符，否则VS不会正确显示摘要; 这里被%#！坑惨了，翻译了全部AspNetCore文档总共130万字符才发现，阿西吧。。。
-                                        okStr = okStr.Replace("环境名称。开发", "EnvironmentName.Development"); //同上
-                                        okStr = okStr.Replace("环境名称。暂存", "EnvironmentName.Staging"); //同上
-                                        okStr = okStr.Replace("环境名称。生产", "EnvironmentName.Production"); //同上
-                                        okStr = okStr.Replace("系统。异常", "System.Exception"); //同上
-                                        okStr = okStr.Replace("“", "\""); //同上
-                                        okStr = okStr.Replace("”", "\""); //同上
+                                        okStr = okStr
+                                            .Replace("\\", "") //移除多余的转义符，否则VS不会正确显示摘要; 这里被%#！坑惨了，翻译了全部AspNetCore文档总共130万字符才发现，阿西吧。。。
+                                            .Replace("环境名称。开发", "EnvironmentName.Development") //同上
+                                            .Replace("环境名称。暂存", "EnvironmentName.Staging") //同上
+                                            .Replace("环境名称。生产", "EnvironmentName.Production") //同上
+                                            .Replace("系统。异常", "System.Exception") //同上
+                                            .Replace("“", "\"") //同上
+                                            .Replace("”", "\""); //同上
                                         //至此接近完美了，硬伤是百度翻译词义的准确性，GoogleTranslate很不错，可惜我申请不了接口，要绑定支付方式，尝试过用协议调用https://translate.google.cn/，单位时间内对IP有翻译次数限制，挂代理速度及稳定性又很无奈，先将就下吧。。。
-                                        ReadXmlList = ReadXmlList.Replace(MatchVar[k].Value, MatchVar[k].Value + " | 百度译文：" + okStr + "\r\n            "); //原文+译文替换原文,后面换行加些空白字符保持格式一致性
+
+                                        //原文+译文替换原文,后面换行加些空白字符保持格式一致性 
+                                        ReadXmlList = ReadXmlList.Replace(MatchVar[k].Value, $"{MatchVar[k].Value}<para>{okStr}</para>{Environment.NewLine}");
                                     }
                                 }
                             }
