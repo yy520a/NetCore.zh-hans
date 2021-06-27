@@ -32,9 +32,12 @@ namespace NetCore.zh_hans
                 Gdir.CreateSubdirectory("zh-hans");
             }
 
-            OpenFileDialog openXml = new OpenFileDialog();
-            openXml.Multiselect = true;
-            openXml.Filter = "要翻译的文件,可多选|*.xml";
+            OpenFileDialog openXml = new OpenFileDialog
+            {
+                Multiselect = true,
+                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "packs"),
+                Filter = "要翻译的文件,可多选|*.xml"
+            };
             if (openXml.ShowDialog() == DialogResult.OK)
             {
                 string[] fileNames = openXml.FileNames; //获取文件列表
