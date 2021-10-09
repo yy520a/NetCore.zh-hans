@@ -134,18 +134,19 @@ namespace NetCore.zh_hans
                             button_Import.Text = $"翻译文本：{text}";
                         }));
 
-                        if (!concurrentDictionary.TryGetValue(text, out var translationText))
+                        if (!concurrentDictionary.TryGetValue(text.ReplaceSpace(), out var translationText))
                         {
                             translationText = await TranslateText(text, appid, secret);
+
+                            if (!string.IsNullOrWhiteSpace(translationText))
+                            {
+                                concurrentDictionary.TryAdd(text.ReplaceSpace(), translationText);
+                            }
+
                             await Task.Delay(TimeSpan.FromMilliseconds(200));
                         }
 
                         dict[text] = translationText;
-
-                        if (!string.IsNullOrWhiteSpace(translationText))
-                        {
-                            concurrentDictionary.AddOrUpdate(text, translationText, (key, old) => key);
-                        }
                     }
                 }));
             }
@@ -172,7 +173,7 @@ namespace NetCore.zh_hans
 
                 if (!string.IsNullOrWhiteSpace(translationText))
                 {
-                    concurrentDictionary.AddOrUpdate(key, translationText, (key, old) => key);
+                    concurrentDictionary.TryAdd(key.ReplaceSpace(), translationText);
                 }
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
@@ -213,7 +214,7 @@ namespace NetCore.zh_hans
                 var matches = new List<Match>();
                 foreach (var pattern in regexPatterns)
                 {
-                    var regex = new Regex(pattern);
+                    var regex = new Regex(pattern, RegexOptions.Multiline);
                     var result = regex.Matches(readXmlList);
                     if (result.Count > 0)
                     {
@@ -226,11 +227,13 @@ namespace NetCore.zh_hans
 
                 foreach (var match in matches)
                 {
-                    var text = match.Value?.Trim()
-                        .Replace("\r\n", "")
-                        .Replace("  ", " ")
-                        .Trim('\n', ' ')
-                        ;
+                    if (string.IsNullOrWhiteSpace(match.Value))
+                    {
+                        continue;
+                    }
+
+                    var text = match.Value.Trim();
+
                     if (!string.IsNullOrWhiteSpace(text))
                     {
                         //如果不包含空格，说明是一个单词，不进行替换
@@ -245,7 +248,14 @@ namespace NetCore.zh_hans
         }
         private static async Task<string> TranslateText(string text, string appid, string secret)
         {
-            var okStr = await Translate.TranslateText(text, appid, secret); //执行翻译
+            var originalText = text.ReplaceSpace();
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "";
+            }
+
+            var okStr = await Translate.TranslateText(originalText, appid, secret); //执行翻译
             if (string.IsNullOrWhiteSpace(okStr))
             {
                 return "";
