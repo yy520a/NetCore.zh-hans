@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -7,11 +8,13 @@ namespace NetCore.zh_hans
     public static class AppConfig
     {
         private static readonly string configPath;
+        private static readonly string dataPath;
 
         static AppConfig()
         {
             //获得配置文件的全路径
             configPath = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "app.json";
+            dataPath = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "data.json";
         }
         public static BaiduAccount GetBaiduAccount()
         {
@@ -20,7 +23,7 @@ namespace NetCore.zh_hans
                 return new BaiduAccount();
             }
 
-            string json = File.ReadAllText(configPath, Encoding.UTF8);
+            var json = File.ReadAllText(configPath, Encoding.UTF8);
             if (string.IsNullOrWhiteSpace(json))
             {
                 return new BaiduAccount();
@@ -30,20 +33,48 @@ namespace NetCore.zh_hans
         }
         public static void SetBaiduAccount(string appid, string secret)
         {
-            using FileStream fs = System.IO.File.Open(configPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+            using var fs = System.IO.File.Open(configPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 
-            string json = JsonConvert.SerializeObject(new BaiduAccount
+            var json = JsonConvert.SerializeObject(new BaiduAccount
             {
                 Appid = appid,
                 Secret = secret
             });
 
-            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            var bytes = Encoding.UTF8.GetBytes(json);
             fs.Write(bytes, 0, bytes.Length);
             //刷新缓冲区
             fs.Flush();
 
             //  File.WriteAllText(configPath, json);
+        }
+
+
+        public static void SetTranslateData(IDictionary<string, string> data)
+        {
+            using var fs = System.IO.File.Open(dataPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+
+            var json = JsonConvert.SerializeObject(data);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            fs.Write(bytes, 0, bytes.Length);
+            //刷新缓冲区
+            fs.Flush();
+        }
+
+        public static IDictionary<string, string> GetTranslateData()
+        {
+            if (!File.Exists(dataPath))
+            {
+                return new Dictionary<string, string>();
+            }
+
+            var json = File.ReadAllText(dataPath, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new Dictionary<string, string>();
+            }
+
+            return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
         }
 
     }

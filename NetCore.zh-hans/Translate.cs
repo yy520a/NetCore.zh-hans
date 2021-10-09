@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -102,7 +101,7 @@ namespace NetCore.zh_hans
         }
 
         //https://api.fanyi.baidu.com/api/trans/product/apidoc
-        public class TranslateResult
+        private class TranslateResult
         {
             public int error_code { get; set; }
             public string from { get; set; }
@@ -110,7 +109,7 @@ namespace NetCore.zh_hans
             public Trans_Result[] trans_result { get; set; }
         }
 
-        public class Trans_Result
+        private class Trans_Result
         {
             /// <summary>
             /// 原文
@@ -121,35 +120,6 @@ namespace NetCore.zh_hans
             /// </summary>
             public string dst { get; set; }
         }
-
-
-        /// <summary>
-        /// Unicode转字符串
-        /// </summary>
-        /// <param name="source">经过Unicode编码的字符串</param>
-        /// <returns>正常字符串</returns>
-        public static string UnicodeToString(string source)
-        {
-            return new Regex(@"\\u([0-9A-F]{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled).Replace(
-                source, x => string.Empty + Convert.ToChar(Convert.ToUInt16(x.Result("$1"), 16)));
-        }
-
-        /// <summary>
-        /// 字符串转Unicode
-        /// </summary>
-        /// <param name="source">源字符串</param>
-        /// <returns>Unicode编码后的字符串</returns>
-        public static string String2Unicode(string source)
-        {
-            var bytes = Encoding.Unicode.GetBytes(source);
-            var stringBuilder = new StringBuilder();
-            for (var i = 0; i < bytes.Length; i += 2)
-            {
-                stringBuilder.AppendFormat("\\u{0}{1}", bytes[i + 1].ToString("x").PadLeft(2, '0'), bytes[i].ToString("x").PadLeft(2, '0'));
-            }
-            return stringBuilder.ToString();
-        }
-
 
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -106,6 +107,10 @@ namespace NetCore.zh_hans
 
             }));
 
+            var translateData = AppConfig.GetTranslateData();
+
+            var concurrentDictionary = new ConcurrentDictionary<string, string>(translateData);
+
             //百度翻译高级版（QPS=10） 
             const int qps = 5;
             var bathCount = allText.Count / qps;
@@ -129,14 +134,31 @@ namespace NetCore.zh_hans
                             button_Import.Text = $"翻译文本：{text}";
                         }));
 
-                        var translationText = await TranslateText(text, appid, secret);
+                        if (!concurrentDictionary.TryGetValue(text, out var translationText))
+                        {
+                            translationText = await TranslateText(text, appid, secret);
+                            await Task.Delay(TimeSpan.FromMilliseconds(200));
+                        }
+
                         dict[text] = translationText;
-                        await Task.Delay(TimeSpan.FromMilliseconds(200));
+
+                        if (!string.IsNullOrWhiteSpace(translationText))
+                        {
+                            concurrentDictionary.AddOrUpdate(text, translationText, (key, old) => key);
+                        }
                     }
                 }));
             }
 
-            await Task.WhenAll(list.ToArray());
+            try
+            {
+                await Task.WhenAll(list.ToArray());
+            }
+            catch (Exception)
+            {
+                AppConfig.SetTranslateData(concurrentDictionary);
+            }
+
 
             //对于请求失败的词语 再重试一次
             var failKeys = dict
@@ -147,8 +169,15 @@ namespace NetCore.zh_hans
             {
                 var translationText = await TranslateText(key, appid, secret);
                 dict[key] = translationText;
+
+                if (!string.IsNullOrWhiteSpace(translationText))
+                {
+                    concurrentDictionary.AddOrUpdate(key, translationText, (key, old) => key);
+                }
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
+
+            AppConfig.SetTranslateData(concurrentDictionary);
 
             return dict;
         }
