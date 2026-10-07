@@ -5,5 +5,3 @@
 
 3.复制zh-hans目录到C:\Program Files\dotnet\packs\Microsoft.AspNetCore.App.Ref\3.1.8\ref\netcoreapp3.1 ，然后重启VS ，AspNetCore.App.Ref相关的方法“摘要”智能提示时会变成 原文+译文：  Visual Studio 2019 测试通过;
 
-
-4.通过傲雪兄弟优化后，翻译速度有很大的提升；
